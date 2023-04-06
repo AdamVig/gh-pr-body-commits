@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+remote='origin'
+beginning_marker='<!--generated content, do not edit-->'
+end_marker='<!--end generated content-->'
+
+# Do not pipe gh output to a pager
+unset PAGER
+
+# Get the name of the default branch for a given remote.
+get_default_branch() {
+	# If default branch ref is not present, try to update it
+	if ! git symbolic-ref --quiet "refs/remotes/$remote/HEAD" &>/dev/null &&
+		! git remote set-head "$remote" --auto &>/dev/null; then
+		echo 'failed to get default branch from remote'
+		return 1
+	fi
+
+	default_branch="$(git symbolic-ref "refs/remotes/$remote/HEAD")"
+	echo "${default_branch##"refs/remotes/$remote/"}"
+}
+
+base_ref="${1-}"
+# No base branch provided, so try to get the base branch from a pull request if there is one
+if [ -z "$base_ref" ] && ! base_ref="$(gh pr view --json baseRefName --jq '.baseRefName' 2>/dev/null)"; then
+	# No base branch provided and no open pull request, so try to get the default branch
+	if ! base_ref="$(get_default_branch)"; then
+		echo 'error: please provide a base ref'
+		exit 1
+	fi
+fi
+
+generate_body_content() {
+	echo "**Commits**"
+	# 1. Format commits as Markdown list items:
+	# - <subject>
+	#   <body indented by two spaces>
+	#
+	# 2. Replace `# ` with `- `, preserving any indentation, to change comments into list items
+	# 3. Replace tabs with four spaces so that indentation works correctly in Markdown
+	git log \
+		"$remote"/"$base_ref".. \
+		--pretty='format:- %s%w(0,2,2)%+b' \
+		-- |
+		sed -E -e 's/#(\s+)/\1- /g' -e 's/\t/    /g'
+}
+
+generate_body_content_with_markers() {
+	echo "$beginning_marker"
+	generate_body_content
+	echo "$end_marker"
+}
+
+if body="$(gh pr view --json body --jq '.body')"; then
+	echo >&2 'updating existing pull request...'
+
+	if [[ $body == *"$beginning_marker"* ]] && [[ $body == *"$end_marker"* ]]; then
+		tmp="$(mktemp)"
+		cleanup() {
+			rm -f "$tmp"
+		}
+		trap cleanup EXIT
+
+		generate_body_content >"$tmp"
+
+		# Replace content between markers with generated content
+		updated_body="$(
+			echo "$body" | awk "/$beginning_marker/ { t=1; print; system(\"cat $tmp\") } 
+     /$end_marker/   { t=0 } 
+     t==0 { print }"
+		)"
+
+	else
+		# No markers found; append to bottom of existing body with markers
+		updated_body="${body}
+$(generate_body_content_with_markers)"
+	fi
+
+	echo "$updated_body" | gh pr edit --body-file='-'
+else
+	# New pull request
+	generate_body_content_with_markers
+fi
