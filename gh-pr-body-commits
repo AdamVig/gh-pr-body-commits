@@ -21,22 +21,24 @@ get_default_branch() {
 	default_branch="$(git symbolic-ref "refs/remotes/$remote/HEAD")"
 	echo "${default_branch##"refs/remotes/$remote/"}"
 }
-
+set -x
 # `gh pr view` can return closed pull requests, so we use a search instead
 # Only one pull request can be open for a branch at a time, so this is guaranteed to return zero or one pull requests
+# $1: field to extract
 get_pr() {
-	result="$(gh pr list --head="$(git symbolic-ref --short HEAD)" --state='open' "$@")"
+	field="${1:-}"
+	head="$(git symbolic-ref --short HEAD)"
+	gh pr list \
+		--head="$head" \
+		--state='open' \
+		--json="$field" \
+		--jq="if length == 0 then halt_error(1) else .[0].${field} end"
 
-	# The command exits 0 when there are no results, so we have to manually exit 1 in that case
-	if [ -z "$result" ]; then
-		return 1
-	fi
-	echo "$result"
 }
 
 base_ref="${1-}"
 # No base branch provided, so try to get the base branch from a pull request if there is one
-if [ -z "$base_ref" ] && ! base_ref="$(get_pr --json baseRefName --jq '.[0].baseRefName' 2>/dev/null)"; then
+if [ -z "$base_ref" ] && ! base_ref="$(get_pr baseRefName 2>/dev/null)"; then
 	# No base branch provided and no open pull request, so try to get the default branch
 	if ! base_ref="$(get_default_branch)"; then
 		echo 'error: please provide a base ref'
@@ -66,7 +68,7 @@ generate_body_content_with_markers() {
 	echo "$end_marker"
 }
 
-if body="$(get_pr --json body --jq '.[0].body')"; then
+if body="$(get_pr body)"; then
 	echo >&2 'updating existing pull request...'
 
 	if [[ $body == *"$beginning_marker"* ]] && [[ $body == *"$end_marker"* ]]; then
