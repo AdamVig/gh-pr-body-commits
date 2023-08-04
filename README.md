@@ -1,4 +1,4 @@
-# gh-pull-request-body-commit-log
+# gh-pr-body-commits
 
 A GitHub (`gh`) CLI extension to add a commit log to a pull request's body.
 
@@ -13,7 +13,7 @@ A GitHub (`gh`) CLI extension to add a commit log to a pull request's body.
 
 2. Install the extension.
    ```shell
-   gh extension install AdamVig/gh-pull-request-body-commit-log
+   gh extension install AdamVig/gh-pr-body-commits
    ```
 
 ## Usage
@@ -22,9 +22,9 @@ A GitHub (`gh`) CLI extension to add a commit log to a pull request's body.
 # In a GitHub repository
 
 # To create a new pull request
-gh pull-request-body-commit-log | gh pr create --body-file='-'
+gh pr-body-commits | gh pr create --body-file='-'
 
 # To update an existing pull request
-gh pull-request-body-commit-log
+gh pr-body-commits
 
 ```
