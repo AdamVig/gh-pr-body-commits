@@ -21,7 +21,7 @@ get_default_branch() {
 	default_branch="$(git symbolic-ref "refs/remotes/$remote/HEAD")"
 	echo "${default_branch##"refs/remotes/$remote/"}"
 }
-set -x
+
 # `gh pr view` can return closed pull requests, so we use a search instead
 # Only one pull request can be open for a branch at a time, so this is guaranteed to return zero or one pull requests
 # $1: field to extract
