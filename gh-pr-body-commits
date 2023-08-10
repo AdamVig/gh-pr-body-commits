@@ -32,13 +32,14 @@ get_pr() {
 		--head="$head" \
 		--state='open' \
 		--json="$field" \
-		--jq="if length == 0 then halt_error(1) else .[0].${field} end"
+		--jq="if length == 0 then halt_error(1) else .[0].${field} end" \
+		2>/dev/null
 
 }
 
 base_ref="${1-}"
 # No base branch provided, so try to get the base branch from a pull request if there is one
-if [ -z "$base_ref" ] && ! base_ref="$(get_pr baseRefName 2>/dev/null)"; then
+if [ -z "$base_ref" ] && ! base_ref="$(get_pr baseRefName)"; then
 	# No base branch provided and no open pull request, so try to get the default branch
 	if ! base_ref="$(get_default_branch)"; then
 		echo 'error: please provide a base ref'
