@@ -38,6 +38,11 @@ get_pr() {
 }
 
 base_ref="${1-}"
+# If $1 starts with two hyphens it's probably a flag, not an argument, so ignore it 
+if [[ "$base_ref" == --* ]]; then
+	base_ref=''
+fi
+
 # No base branch provided, so try to get the base branch from a pull request if there is one
 if [ -z "$base_ref" ] && ! base_ref="$(get_pr baseRefName)"; then
 	# No base branch provided and no open pull request, so try to get the default branch
@@ -69,7 +74,7 @@ generate_body_content_with_markers() {
 	echo "$end_marker"
 }
 
-if body="$(get_pr body)"; then
+if [[ "$*" != *--skip-update* ]] && body="$(get_pr body)"; then
 	echo >&2 'updating existing pull request...'
 
 	if [[ $body == *"$beginning_marker"* ]] && [[ $body == *"$end_marker"* ]]; then
