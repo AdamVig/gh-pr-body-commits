@@ -5,6 +5,8 @@ set -euo pipefail
 remote='origin'
 beginning_marker='<!--generated content, do not edit-->'
 end_marker='<!--end generated content-->'
+template_file="${GIT_DIR-$(git rev-parse --absolute-git-dir)}/gh-pr-body-commits-template"
+commits_target='<commits>'
 
 # Do not pipe gh output to a pager
 unset PAGER
@@ -45,6 +47,7 @@ fi
 
 # No base branch provided, so try to get the base branch from a pull request if there is one
 if [ -z "$base_ref" ] && ! base_ref="$(get_pr baseRefName)"; then
+
 	# No base branch provided and no open pull request, so try to get the default branch
 	if ! base_ref="$(get_default_branch)"; then
 		echo 'error: please provide a base ref'
@@ -71,6 +74,17 @@ generate_body_content_with_markers() {
 	echo "$beginning_marker"
 	generate_body_content
 	echo "$end_marker"
+}
+
+insert_in_template() {
+    if ! [ -f "$template_file" ]; then
+	return
+    fi
+
+     sed "/$commits_target/{
+r /dev/stdin
+d
+}" "$template_file"
 }
 
 if [[ "$*" != *--skip-update* ]] && body="$(get_pr body)"; then
@@ -101,5 +115,5 @@ $(generate_body_content_with_markers)"
 	echo "$updated_body" | gh pr edit --body-file='-'
 else
 	# New pull request
-	generate_body_content_with_markers
+	generate_body_content_with_markers | insert_in_template
 fi
