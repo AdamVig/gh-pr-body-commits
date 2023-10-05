@@ -6,7 +6,7 @@ gh extension remove gh-pr-body-commits
 gh extension install .
 ```
 
-From now on, `gh watch` will run the code in your local clone of the repository.
+From now on, `gh pr-body-commits` will run the code in your local clone of the repository.
 
 To revert back to the published version, run:
 ```shell
