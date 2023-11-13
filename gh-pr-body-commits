@@ -63,11 +63,14 @@ generate_body_content() {
 	#
 	# 2. Replace `# ` with `- `, preserving any indentation, to change comments into list items
 	# 3. Replace tabs with four spaces so that indentation works correctly in Markdown
+	# 4. Add a trailing newline if necessary
+	# shellcheck disable=SC1003
 	git log \
 		"$remote"/"$base_ref".. \
 		--pretty='format:- %s%w(0,2,2)%+b' \
 		-- |
-		sed -E -e 's/#(\s+)/\1- /g' -e 's/\t/    /g'
+		sed -E -e 's/#(\s+)/\1- /g' -e 's/\t/    /g' |
+		sed '$a\'
 }
 
 generate_body_content_with_markers() {
