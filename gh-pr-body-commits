@@ -56,6 +56,18 @@ if [ -z "$base_ref" ] && ! base_ref="$(get_pr baseRefName)"; then
 fi
 
 generate_body_content() {
+	revision_range="$remote"/"$base_ref"..HEAD
+
+	if (( $(git rev-list --count "$revision_range") == 1 )); then
+		# If there is only one commit, only output the commit body, adding a trailing newline if necessary
+		# shellcheck disable=SC1003
+		git log \
+			"$revision_range" \
+			--pretty='format:%b' |
+			sed '$a\'
+		return
+	fi
+
 	echo "**Commits**"
 	# 1. Format commits as Markdown list items:
 	# - <subject>
@@ -66,7 +78,7 @@ generate_body_content() {
 	# 4. Add a trailing newline if necessary
 	# shellcheck disable=SC1003
 	git log \
-		"$remote"/"$base_ref".. \
+		"$revision_range" \
 		--pretty='format:- %s%w(0,2,2)%+b' \
 		-- |
 		sed -E -e 's/#(\s+)/\1- /g' -e 's/\t/    /g' |
