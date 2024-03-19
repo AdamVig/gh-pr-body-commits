@@ -3,8 +3,10 @@
 set -euo pipefail
 
 remote='origin'
-beginning_marker='<!--generated content, do not edit-->'
-end_marker='<!--end generated content-->'
+beginning_marker='[//]: # (⇲)'
+end_marker='[//]: # (⇱)'
+beginning_marker_escaped='\[\/\/\]: # (⇲)'
+end_marker_escaped='\[\/\/\]: # (⇱)'
 template_file="${GIT_DIR-$(git rev-parse --absolute-git-dir)}/gh-pr-body-commits-template"
 commits_target='<commits>'
 
@@ -65,24 +67,27 @@ generate_body_content() {
 			"$revision_range" \
 			--pretty='format:%b' |
 			sed '$a\'
-		return
+	else
+		# Otherwise, output all commits in the branch as a list
+		echo "**Commits**"
+		# 1. Format commits as Markdown list items:
+		# - <subject>
+		#   <body indented by two spaces>
+		#
+		# 2. Replace `# ` with `- `, preserving any indentation, to change comments into list items
+		# 3. Replace tabs with four spaces so that indentation works correctly in Markdown
+		# 4. Add a trailing newline if necessary
+		# shellcheck disable=SC1003
+		git log \
+				"$revision_range" \
+				--pretty='format:- %s%w(0,2,2)%+b' \
+				-- |
+			sed -E -e 's/#(\s+)/\1- /g' -e 's/\t/    /g' |
+			sed '$a\'
 	fi
 
-	echo "**Commits**"
-	# 1. Format commits as Markdown list items:
-	# - <subject>
-	#   <body indented by two spaces>
-	#
-	# 2. Replace `# ` with `- `, preserving any indentation, to change comments into list items
-	# 3. Replace tabs with four spaces so that indentation works correctly in Markdown
-	# 4. Add a trailing newline if necessary
-	# shellcheck disable=SC1003
-	git log \
-		"$revision_range" \
-		--pretty='format:- %s%w(0,2,2)%+b' \
-		-- |
-		sed -E -e 's/#(\s+)/\1- /g' -e 's/\t/    /g' |
-		sed '$a\'
+	# The end marker requires a newline before it, see https://stackoverflow.com/a/20885980
+	echo
 }
 
 generate_body_content_with_markers() {
@@ -116,14 +121,16 @@ if [[ "$*" != *--skip-update* ]] && body="$(get_pr body)"; then
 
 		# Replace content between markers with generated content
 		updated_body="$(
-			echo "$body" | awk "/$beginning_marker/ { t=1; print; system(\"cat $tmp\") } 
-     /$end_marker/   { t=0 } 
+			echo "$body" | awk "/$beginning_marker_escaped/ { t=1; print; system(\"cat $tmp\") }
+     /$end_marker_escaped/   { t=0 }
      t==0 { print }"
 		)"
 
 	else
 		# No markers found; append to bottom of existing body with markers
+		# Separate from existing body with a newline so that markers are hidden
 		updated_body="${body}
+
 $(generate_body_content_with_markers)"
 	fi
 
