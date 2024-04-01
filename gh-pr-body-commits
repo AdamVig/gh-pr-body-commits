@@ -111,30 +111,34 @@ if [[ "$*" != *--skip-update* ]] && body="$(get_pr body)"; then
 	echo >&2 'updating existing pull request...'
 
 	if [[ $body == *"$beginning_marker"* ]] && [[ $body == *"$end_marker"* ]]; then
-		tmp="$(mktemp)"
+		echo >&2 'replacing existing generated content...'
+	  updated_generated_content_file="$(mktemp)"
+		pull_request_body_file="$(mktemp)"
 		cleanup() {
-			rm -f "$tmp"
+			rm -f "$updated_generated_content_file" "$pull_request_body_file"
 		}
 		trap cleanup EXIT
 
-		generate_body_content >"$tmp"
+		generate_body_content >"$updated_generated_content_file"
+		echo "$body" >"$pull_request_body_file"
 
 		# Replace content between markers with generated content
-		updated_body="$(
-			echo "$body" | awk "/$beginning_marker_escaped/ { t=1; print; system(\"cat $tmp\") }
-     /$end_marker_escaped/   { t=0 }
-     t==0 { print }"
-		)"
-
+		ed -s "$pull_request_body_file" <<EOF
+/$beginning_marker_escaped/+,/$end_marker_escaped/-d
+/$beginning_marker_escaped/r $updated_generated_content_file
+w
+q
+EOF
 	else
-		# No markers found; append to bottom of existing body with markers
+		echo >&2 'adding generated content at the bottom of the existing pull request description...'
 		# Separate from existing body with a newline so that markers are hidden
-		updated_body="${body}
+		echo "${body}
 
-$(generate_body_content_with_markers)"
+$(generate_body_content_with_markers)" >"$pull_request_body_file"
 	fi
 
-	echo "$updated_body" | gh pr edit --body-file='-'
+	echo >&2 'submitting updated pull request body...'
+	gh pr edit --body-file="$pull_request_body_file"
 else
 	# New pull request
 	generate_body_content_with_markers | insert_in_template
