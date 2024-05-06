@@ -107,17 +107,21 @@ d
 }" "$template_file"
 }
 
+pull_request_body_file="$(mktemp)"
+cleanup_pull_request_body_file() {
+	rm -f "$pull_request_body_file"
+}
+trap cleanup_pull_request_body_file EXIT
 if [[ "$*" != *--skip-update* ]] && body="$(get_pr body)"; then
 	echo >&2 'updating existing pull request...'
 
 	if [[ $body == *"$beginning_marker"* ]] && [[ $body == *"$end_marker"* ]]; then
 		echo >&2 'replacing existing generated content...'
 	  updated_generated_content_file="$(mktemp)"
-		pull_request_body_file="$(mktemp)"
-		cleanup() {
-			rm -f "$updated_generated_content_file" "$pull_request_body_file"
+		cleanup_updated_generated_content_file() {
+			rm -f "$updated_generated_content_file"
 		}
-		trap cleanup EXIT
+		trap cleanup_updated_generated_content_file EXIT
 
 		generate_body_content >"$updated_generated_content_file"
 		echo "$body" >"$pull_request_body_file"
