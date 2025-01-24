@@ -43,7 +43,6 @@ gh pr-body-commits my-feature-branch --skip-update
 gh pr-body-commits --skip-update
 # Output:
 # ## Description
-# **Commits**
 # - Example commit
 # ## Test Plan
 ```

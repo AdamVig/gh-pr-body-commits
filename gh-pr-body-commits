@@ -69,7 +69,6 @@ generate_body_content() {
 			sed '$a\'
 	else
 		# Otherwise, output all commits in the branch as a list
-		echo "**Commits**"
 		# 1. Format commits as Markdown list items:
 		# - <subject>
 		#   <body indented by two spaces>
