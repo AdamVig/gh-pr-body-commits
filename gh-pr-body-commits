@@ -42,7 +42,7 @@ get_pr() {
 }
 
 base_ref="${1-}"
-# If $1 starts with two hyphens it's probably a flag, not an argument, so ignore it 
+# If $1 starts with two hyphens it's probably a flag, not an argument, so ignore it
 if [[ "$base_ref" == --* ]]; then
 	base_ref=''
 fi
@@ -114,7 +114,10 @@ trap cleanup_pull_request_body_file EXIT
 if [[ "$*" != *--skip-update* ]] && body="$(get_pr body)"; then
 	echo >&2 'updating existing pull request...'
 
-	if [[ $body == *"$beginning_marker"* ]] && [[ $body == *"$end_marker"* ]]; then
+	if [[ "$*" == *--no-markers* ]]; then
+		echo >&2 'overwriting existing pull request description...'
+		generate_body_content >"$pull_request_body_file"
+	elif [[ $body == *"$beginning_marker"* ]] && [[ $body == *"$end_marker"* ]]; then
 		echo >&2 'replacing existing generated content...'
 	  updated_generated_content_file="$(mktemp)"
 		cleanup_updated_generated_content_file() {
@@ -144,5 +147,10 @@ $(generate_body_content_with_markers)" >"$pull_request_body_file"
 	gh pr edit --body-file="$pull_request_body_file"
 else
 	# New pull request
-	generate_body_content_with_markers | insert_in_template
+
+	if [[ "$*" == *--no-markers* ]]; then
+		generate_body_content | insert_in_template
+	else
+		generate_body_content_with_markers | insert_in_template
+	fi
 fi
