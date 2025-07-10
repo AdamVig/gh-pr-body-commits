@@ -43,7 +43,7 @@ get_pr() {
 
 base_ref="${1-}"
 # If $1 starts with two hyphens it's probably a flag, not an argument, so ignore it
-if [[ "$base_ref" == --* ]]; then
+if [[ $base_ref == --* ]]; then
 	base_ref=''
 fi
 
@@ -60,10 +60,10 @@ fi
 generate_body_content() {
 	revision_range="$remote"/"$base_ref"..HEAD
 
-	if (( $(git rev-list --count "$revision_range") == 0 )); then
+	if (($(git rev-list --count "$revision_range") == 0)); then
 		echo >&2 "error: no commits found in range '$revision_range'"
 		return
-	elif (( $(git rev-list --count "$revision_range") == 1 )); then
+	elif (($(git rev-list --count "$revision_range") == 1)); then
 		# If there is only one commit, only output the commit body, adding a trailing newline if necessary
 		# shellcheck disable=SC1003
 		git log \
@@ -77,9 +77,9 @@ generate_body_content() {
 		# - <subject>
 		#   <body indented by two spaces>
 		if ! commits="$(git log \
-				"$revision_range" \
-				--pretty='format:- %s%w(0,2,2)%+b' \
-				--)"; then
+			"$revision_range" \
+			--pretty='format:- %s%w(0,2,2)%+b' \
+			--)"; then
 			echo >&2 'failed to get commits'
 			return 1
 		fi
@@ -107,11 +107,11 @@ generate_body_content_with_markers() {
 }
 
 insert_in_template() {
-  if ! [ -f "$template_file" ]; then
+	if ! [ -f "$template_file" ]; then
 		cat /dev/stdin
 		return
-  fi
-  sed "/$commits_target/{
+	fi
+	sed "/$commits_target/{
 r /dev/stdin
 d
 }" "$template_file"
@@ -122,15 +122,15 @@ cleanup_pull_request_body_file() {
 	rm -f "$pull_request_body_file"
 }
 trap cleanup_pull_request_body_file EXIT
-if [[ "$*" != *--skip-update* ]] && body="$(get_pr body)"; then
+if [[ $* != *--skip-update* ]] && body="$(get_pr body)"; then
 	echo >&2 'updating existing pull request...'
 
-	if [[ "$*" == *--no-markers* ]]; then
+	if [[ $* == *--no-markers* ]]; then
 		echo >&2 'overwriting existing pull request description...'
 		generate_body_content >"$pull_request_body_file"
 	elif [[ $body == *"$beginning_marker"* ]] && [[ $body == *"$end_marker"* ]]; then
 		echo >&2 'replacing existing generated content...'
-	  updated_generated_content_file="$(mktemp)"
+		updated_generated_content_file="$(mktemp)"
 		cleanup_updated_generated_content_file() {
 			rm -f "$updated_generated_content_file"
 		}
@@ -159,7 +159,7 @@ $(generate_body_content_with_markers)" >"$pull_request_body_file"
 else
 	# New pull request
 
-	if [[ "$*" == *--no-markers* ]]; then
+	if [[ $* == *--no-markers* ]]; then
 		generate_body_content | insert_in_template
 	else
 		generate_body_content_with_markers | insert_in_template
