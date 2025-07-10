@@ -96,11 +96,11 @@ generate_body_content_with_markers() {
 }
 
 insert_in_template() {
-    if ! [ -f "$template_file" ]; then
-	return
-    fi
-
-     sed "/$commits_target/{
+  if ! [ -f "$template_file" ]; then
+		cat /dev/stdin
+		return
+  fi
+  sed "/$commits_target/{
 r /dev/stdin
 d
 }" "$template_file"
