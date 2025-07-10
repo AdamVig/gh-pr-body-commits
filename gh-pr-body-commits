@@ -72,20 +72,28 @@ generate_body_content() {
 			sed '$a\'
 	else
 		# Otherwise, output all commits in the branch as a list
-		# 1. Format commits as Markdown list items:
+
+		# Format commits as Markdown list items:
 		# - <subject>
 		#   <body indented by two spaces>
-		#
-		# 2. Replace `# ` with `- `, preserving any indentation, to change comments into list items
-		# 3. Replace tabs with four spaces so that indentation works correctly in Markdown
-		# 4. Add a trailing newline if necessary
-		# shellcheck disable=SC1003
-		git log \
+		if ! commits="$(git log \
 				"$revision_range" \
 				--pretty='format:- %s%w(0,2,2)%+b' \
-				-- |
+				--)"; then
+			echo >&2 'failed to get commits'
+			return 1
+		fi
+
+		# 1. Replace `# ` with `- `, preserving any indentation, to change comments into list items
+		# 2. Replace tabs with four spaces so that indentation works correctly in Markdown
+		# 3. Add a trailing newline if necessary
+		# shellcheck disable=SC1003
+		if ! echo "$commits" |
 			sed -E -e 's/#(\s+)/\1- /g' -e 's/\t/    /g' |
-			sed '$a\'
+			sed '$a\'; then
+			echo >&2 'failed to format commits'
+			return 1
+		fi
 	fi
 
 	# The end marker requires a newline before it, see https://stackoverflow.com/a/20885980
