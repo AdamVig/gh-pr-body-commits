@@ -60,7 +60,10 @@ fi
 generate_body_content() {
 	revision_range="$remote"/"$base_ref"..HEAD
 
-	if (( $(git rev-list --count "$revision_range") == 1 )); then
+	if (( $(git rev-list --count "$revision_range") == 0 )); then
+		echo >&2 "error: no commits found in range '$revision_range'"
+		return
+	elif (( $(git rev-list --count "$revision_range") == 1 )); then
 		# If there is only one commit, only output the commit body, adding a trailing newline if necessary
 		# shellcheck disable=SC1003
 		git log \
